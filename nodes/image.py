@@ -1,11 +1,11 @@
 import torch
 import comfy
 import numpy as np
-import math
 from PIL import Image
 from torchvision.transforms.functional import to_pil_image
 
-class FastAlphaCropper:
+
+class CropAlpha:
     @classmethod
     def INPUT_TYPES(cls):
         return {
@@ -19,51 +19,50 @@ class FastAlphaCropper:
     RETURN_NAMES = ("image", "mask")
 
     FUNCTION = "crop"
-    CATEGORY = "image/processing"
+    CATEGORY = "6yuan/image"
 
     def crop(self, image, padding: int = 0):
+        if isinstance(image, list):
+            image = torch.stack(image, dim=0)
+        batch, height, width, channels = image.shape
         cropped_images = []
         cropped_masks = []
 
-        # 遍历每个批次的图像
-        for img in image:
-            # 提取Alpha通道（假设RGBA格式）
+        for b in range(batch):
+            img = image[b]
             alpha = img[..., 3]
 
-            height = img.shape[0]
-            width = img.shape[1]
-            # 创建有效区域掩码
             mask = (alpha > 0.01)
 
-            # 寻找有效区域边界
             rows = torch.any(mask, dim=1)
             cols = torch.any(mask, dim=0)
 
             ymin, ymax = self._find_boundary(rows)
             xmin, xmax = self._find_boundary(cols)
 
-            # 处理全透明情况
             if ymin is None or xmin is None:
                 cropped_images.append(img)
                 cropped_masks.append(torch.zeros_like(alpha))
                 continue
 
-            # 添加padding并限制边界
             ymin = max(0, ymin - padding)
             ymax = min(height, ymax + padding)
             xmin = max(0, xmin - padding)
             xmax = min(width, xmax + padding)
 
-            # 执行裁剪
-            cropped = img[ymin:ymax, xmin:xmax, :4]  # 保留RGB通道
+            cropped = img[ymin:ymax, xmin:xmax, :4]
             cropped_mask = alpha[ymin:ymax, xmin:xmax]
 
             cropped_images.append(cropped)
             cropped_masks.append(cropped_mask)
 
-        return cropped_images, cropped_masks
-    def _find_boundary(self, arr):
-        nz = torch.nonzero(arr)
+        cropped_images = torch.stack(cropped_images, dim=0)
+        cropped_masks = torch.stack(cropped_masks, dim=0)
+
+        return (cropped_images, cropped_masks)
+
+    def _find_boundary(self, arr: torch.Tensor):
+        nz = torch.nonzero(arr, as_tuple=False)
         if nz.numel() == 0:
             return (None, None)
         return (nz[0].item(), nz[-1].item() + 1)
@@ -96,9 +95,9 @@ class ShrinkImage:
 
     RETURN_TYPES = ("IMAGE",)
     FUNCTION = "shrink_image"
-    CATEGORY = "image/processing"
+    CATEGORY = "6yuan/image"
 
-    def calculate_scale(self, img, mode, scale=None, width=None, height=None):
+    def calculate_scale(self, img: Image.Image, mode, scale=None, width=None, height=None):
         if mode == "scale":
             return scale
         else:
@@ -109,10 +108,10 @@ class ShrinkImage:
             scale_y = height / img_height
             return min(scale_x, scale_y)
 
-    def shrink_image_with_scale(self, img, scale, algorithm):
+    def shrink_image_with_scale(self, img: Image.Image, scale, algorithm):
         width, height = img.size
-        new_width = int(width * scale)
-        new_height = int(height * scale)
+        new_width = max(1, int(width * scale))
+        new_height = max(1, int(height * scale))
         return img.resize((new_width, new_height), algorithm)
 
     def shrink_image(self, image, mode, resize_algorithm, scale=None, width=None, height=None):
@@ -124,25 +123,33 @@ class ShrinkImage:
         }
         algorithm = resize_algorithms[resize_algorithm]
 
-        output_images = []
-        for img in image:
-            print('img.shape=', img.shape)
-            img = to_pil_image(img.permute(2, 0, 1))
-            scale = self.calculate_scale(img, mode, scale, width, height)
-            resized_img = self.shrink_image_with_scale(img, scale, algorithm)
-            resized_img_np = np.array(resized_img).astype(np.float32) / 255.0
-            resized_img_np = torch.from_numpy(resized_img_np)
-            output_images.append(resized_img_np)
+        if isinstance(image, list):
+            image = torch.stack(image, dim=0)
 
+        batch = image.shape[0]
+        output_images = []
+
+        for b in range(batch):
+            img_t = image[b]
+            img_pil = to_pil_image(img_t.permute(2, 0, 1))
+
+            s = self.calculate_scale(img_pil, mode, scale, width, height)
+            resized_img = self.shrink_image_with_scale(img_pil, s, algorithm)
+
+            resized_img_np = np.array(resized_img).astype(np.float32) / 255.0
+            resized_img_t = torch.from_numpy(resized_img_np)
+            output_images.append(resized_img_t)
+
+        output_images = torch.stack(output_images, dim=0)
         return (output_images,)
 
-# 注册节点
+
 NODE_CLASS_MAPPINGS = {
-    "FastAlphaCropper": FastAlphaCropper,
+    "CropAlpha": CropAlpha,
     "ShrinkImage": ShrinkImage
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "FastAlphaCropper": "Fast Alpha Cropper",
+    "CropAlpha": "Crop Alpha",
     "ShrinkImage": "Shrink Image"
 }
