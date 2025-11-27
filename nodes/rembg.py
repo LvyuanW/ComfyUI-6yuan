@@ -13,7 +13,7 @@ def pil2tensor(image):
     return torch.from_numpy(np.array(image).astype(np.float32) / 255.0).unsqueeze(0)
 
 
-class Rembg:
+class RemoveBackground:
     def __init__(self):
         pass
 
@@ -36,7 +36,7 @@ class Rembg:
         else:
             remover = Remover(jit=True)
         img_list = []
-        for img in tqdm(image, "Inspyrenet Rembg"):
+        for img in tqdm(image, "Remove Background"):
             mid = remover.process(tensor2pil(img), type='rgba')
             out = pil2tensor(mid)
             img_list.append(out)
@@ -45,7 +45,7 @@ class Rembg:
         return (img_stack, mask)
 
 
-class RembgAdvanced:
+class RemoveBackgroundAdvanced:
     def __init__(self):
         pass
 
@@ -69,7 +69,7 @@ class RembgAdvanced:
         else:
             remover = Remover(jit=True)
         img_list = []
-        for img in tqdm(image, "Inspyrenet Rembg"):
+        for img in tqdm(image, "Remove Background"):
             mid = remover.process(tensor2pil(img), type='rgba', threshold=threshold)
             out = pil2tensor(mid)
             img_list.append(out)
@@ -79,11 +79,11 @@ class RembgAdvanced:
 
 
 NODE_CLASS_MAPPINGS = {
-    "Rembg": Rembg,
-    "RembgAdvanced": RembgAdvanced,
+    "RemoveBackground": RemoveBackground,
+    "RemoveBackgroundAdvanced": RemoveBackgroundAdvanced,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "Rembg": "Rembg",
-    "RembgAdvanced": "Rembg Advanced",
+    "RemoveBackground": "Remove Background",
+    "RemoveBackgroundAdvanced": "Remove Background Advanced",
 }
