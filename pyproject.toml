@@ -6,6 +6,10 @@ license = { text = "MIT" }
 dependencies = [
     "transparent-background",
     "tqdm",
+    "opencv-python",
+    "scikit-learn",
+    "numpy",
+    "Pillow"
 ]
 
 [project.urls]

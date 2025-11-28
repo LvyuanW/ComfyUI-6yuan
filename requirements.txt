@@ -1,1 +1,6 @@
 transparent-background
+tqdm
+opencv-python
+scikit-learn
+numpy
+Pillow
