@@ -24,6 +24,28 @@ class ShapeLanguageSummary:
     FUNCTION = "analyze"
     CATEGORY = "6yuan/analyze"
 
+    DESCRIPTION = """
+ShapeLanguageSummary 节点输出说明（给设计/视觉同事）
+• style_axes.geometry.circle / square / angular（原 pointy）
+  0~1，三者加起来约等于 1。
+  表示画面整体在“圆形 / 方形 / 锐角形”三种几何风格上的相对倾向。
+• style_axes.direction.orthogonal / diagonal / mixed_direction（原 random）
+  0~1，三者约等于 1。
+  根据轮廓和线条判断：画面更偏水平垂直、对角线，还是没有明显主导方向。
+• style_axes.complexity_level
+  "low" | "medium" | "high"
+  按边缘密度和轮廓数量评估画面复杂度（元素/细节多少）。
+• style_axes.symmetry_level
+  "low" | "medium" | "high"
+  判断画面在水平、垂直或对角轴上的对称程度。
+• style_axes.logo_type
+  "text" | "graphic" | "mixed"
+  粗略判断是“文字为主”、“图形为主”还是“图文混合”。
+• scheme_suggestion + scheme_confidence
+  推荐使用的版式类型（如：square_grid_theme, diagonal_theme, typography_focus），以及推荐的置信度（0~1）。
+  我们用它来自动选择/优先推荐某些海报模板，你们可以按需要采纳或覆盖。
+"""
+
     def analyze(self, image, resize_to=256, edge_detector="canny", angle_tolerance_deg=10):
         # Handle batch: process first image only
         if len(image.shape) == 4:
@@ -341,12 +363,12 @@ class ShapeLanguageSummary:
                 "geometry": {
                     "circle": round(float(geo_circle), 2),
                     "square": round(float(geo_square), 2),
-                    "pointy": round(float(geo_pointy), 2)
+                    "angular": round(float(geo_pointy), 2)
                 },
                 "direction": {
                     "orthogonal": round(float(orth), 2),
                     "diagonal": round(float(diag), 2),
-                    "random": round(float(rand), 2)
+                    "mixed_direction": round(float(rand), 2)
                 },
                 "complexity_level": complexity_level,
                 "symmetry_level": symmetry_level,
@@ -357,7 +379,7 @@ class ShapeLanguageSummary:
             "raw_metrics": {
                 "roundness_score": round(float(roundness_score), 3),
                 "squareness_score": round(float(squareness_score), 3),
-                "pointiness_score": round(float(pointiness_score), 3),
+                "angularity_score": round(float(pointiness_score), 3),
                 "curve_ratio": round(float(curve_ratio), 3),
                 "line_ratio": round(float(line_ratio), 3),
                 "orthogonal_bias": round(float(orthogonal_bias), 3),
@@ -368,7 +390,7 @@ class ShapeLanguageSummary:
                 "symmetry_vertical": round(float(symmetry_vertical), 3),
                 "symmetry_diagonal": round(float(symmetry_diagonal), 3),
                 "text_graphic_ratio": round(float(text_graphic_ratio), 3),
-                "gridness_score": round(float(gridness_score), 3)
+                "grid_strength": round(float(gridness_score), 3)
             }
         }
 
@@ -396,8 +418,8 @@ class ShapeLanguageSummary:
 
         # Draw summary text
         summary_text = f"Scheme: {best_scheme} ({confidence:.2f})\n" \
-                       f"Geo: C={geo_circle:.2f} S={geo_square:.2f} P={geo_pointy:.2f}\n" \
-                       f"Dir: O={orth:.2f} D={diag:.2f} R={rand:.2f}\n" \
+                       f"Geo: C={geo_circle:.2f} S={geo_square:.2f} A={geo_pointy:.2f}\n" \
+                       f"Dir: O={orth:.2f} D={diag:.2f} M={rand:.2f}\n" \
                        f"Comp: {complexity_level} | Sym: {symmetry_level}"
         
         draw.text((5, 5), summary_text, fill=(255, 255, 0), font=font)

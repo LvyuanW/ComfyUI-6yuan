@@ -9,7 +9,8 @@ dependencies = [
     "opencv-python",
     "scikit-learn",
     "numpy",
-    "Pillow"
+    "Pillow",
+    "torch"
 ]
 
 [project.urls]

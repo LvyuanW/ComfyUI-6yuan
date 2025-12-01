@@ -27,6 +27,10 @@ class StringPreview:
     CATEGORY = "6yuan/utils"
 
     def render(self, text, width=512, height=256, font_size=16, padding=8, line_spacing=4, auto_fit=True, min_font_size=10):
+        print("\n=== StringPreview Input ===")
+        print(text)
+        print("===========================\n")
+
         W = int(width)
         H = int(height)
         img = Image.new("RGB", (W, H), (255, 255, 255))
